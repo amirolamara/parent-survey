@@ -1,0 +1,40 @@
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نظرسنجی اولیای زبان‌آموزان</title><link rel="stylesheet" href="/style.css"></head><body>
+<header><div class="logos"><img src="/logo-center.png" alt="کانون نخبگان"><img src="/logo-ldec.png" alt="دپارتمان زبان"></div>
+<h1>نظرسنجی اولیای زبان‌آموزان ترم شهریور مهر دپارتمان زبان کانون نخبگان</h1></header>
+<main><div class="card" id="app"></div></main>
+<script src="/questions.js"></script>
+<script>
+const app=document.getElementById("app"),A={};let step=-1;
+function intro(){app.innerHTML=`<div class="thanks"><h2>اولیای گرامی، سلام و وقتتان بخیر</h2>
+<p>نظر شما برای ما بسیار ارزشمند است. لطفاً نکات را صریح و شفاف بفرمایید؛ این نظرسنجی حدود ۵ دقیقه زمان می‌برد.</p>
+<button class="btn gold" onclick="go(0)">شروع نظرسنجی</button></div>`}
+function go(i){step=i;render()}
+function render(){
+ if(step<0)return intro();
+ const s=STEPS[step],pct=Math.round(step/STEPS.length*100);
+ app.innerHTML=`<div class="bar"><i style="width:${pct+8}%"></i></div><div class="stepname">مرحله ${step+1} از ${STEPS.length} — ${s.title}</div>`+
+ s.q.map(q=>`<div class="q" id="box-${q.id}"><label class="t">${q.n?q.n+". ":""}${q.t}${q.optional?" <small>(اختیاری)</small>":""}</label>${field(q)}</div>`).join("")+
+ `<div class="nav"><button class="btn ghost" onclick="${step==0?"intro();step=-1":"go(step-1)"}">قبلی</button>
+ <button class="btn" id="nx" onclick="next()">${step==STEPS.length-1?"ارسال نظرسنجی":"بعدی"}</button></div>`;
+}
+function field(q){const v=A[q.id]||"";
+ if(q.type=="rating")return `<div class="rating">${[1,2,3,4,5].map(n=>`<button type="button" class="${v==n?"on":""}" onclick="setv('${q.id}',${n})">${n}<small>${RATING_LABELS[n-1]}</small></button>`).join("")}</div>`;
+ if(q.type=="choice")return `<div class="choice">${q.options.map(o=>`<button type="button" class="${v==o?"on":""}" onclick="setv('${q.id}','${o}')">${o}</button>`).join("")}</div>`;
+ if(q.type=="text")return `<textarea oninput="A['${q.id}']=this.value">${v}</textarea>`;
+ return `<input type="text" value="${v}" oninput="A['${q.id}']=this.value">`}
+function setv(id,v){A[id]=v;render()}
+async function next(){
+ let bad=false;
+ STEPS[step].q.forEach(q=>{const ok=q.optional||String(A[q.id]||"").trim();
+  document.getElementById("box-"+q.id).classList.toggle("err",!ok);if(!ok)bad=true});
+ if(bad){alert("لطفاً به پرسش‌های ضروری پاسخ دهید.");return}
+ if(step<STEPS.length-1)return go(step+1);
+ const b=document.getElementById("nx");b.disabled=true;b.textContent="در حال ارسال...";
+ try{const r=await fetch("/api/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(A)});
+  if(!r.ok)throw 0;
+  app.innerHTML=`<div class="thanks"><h2>از شما سپاسگزاریم 🌟</h2><p>نظر ارزشمند شما با موفقیت ثبت شد. با دقت بررسی می‌کنیم و برای بهبود کیفیت آموزشی فرزندان عزیزتان تلاش خواهیم کرد.</p><p>با احترام — دپارتمان زبان کانون نخبگان</p></div>`;
+ }catch(e){alert("ارسال انجام نشد. اینترنت را بررسی کنید و دوباره تلاش کنید.");b.disabled=false;b.textContent="ارسال نظرسنجی"}}
+intro();
+</script></body></html>

@@ -1,0 +1,30 @@
+@font-face{font-family:"Main";src:url(/fonts/main.ttf) format("truetype");font-weight:100 900;font-display:swap}
+:root{--navy:#0d2a6b;--gold:#f5c518;--bg:#f6f7fb;--ink:#1b2440}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Main",Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.9}
+header{background:var(--navy);color:#fff;text-align:center;padding:20px 12px;border-bottom:6px solid var(--gold)}
+header .logos{display:flex;justify-content:center;gap:18px;align-items:center}
+header img{height:84px;width:84px;border-radius:50%;background:#fff;object-fit:cover}
+header h1{font-size:1.15rem;margin:10px 0 0}
+main{max-width:760px;margin:20px auto;padding:0 14px 60px}
+.card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 4px 18px rgba(13,42,107,.08);border-top:4px solid var(--gold)}
+.bar{height:10px;background:#e3e6f0;border-radius:9px;overflow:hidden;margin-bottom:6px}
+.bar i{display:block;height:100%;background:var(--gold);width:0;transition:width .4s}
+.stepname{color:var(--navy);font-weight:700;margin-bottom:14px}
+.q{margin:20px 0}.q label.t{display:block;font-weight:600;margin-bottom:8px}
+.q.err .t{color:#b3261e}
+.rating{display:flex;gap:8px;flex-wrap:wrap}
+.rating button,.choice button{flex:1;min-width:62px;font:inherit;padding:10px 6px;border:2px solid #d3d8e8;background:#fff;border-radius:12px;cursor:pointer}
+.rating button small{display:block;font-size:.7rem;color:#667}
+.rating button.on,.choice button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.rating button.on small{color:var(--gold)}
+.choice{display:flex;gap:8px;flex-wrap:wrap}
+input[type=text],textarea,input[type=password]{width:100%;font:inherit;padding:10px;border:2px solid #d3d8e8;border-radius:12px}
+textarea{min-height:110px}
+.nav{display:flex;justify-content:space-between;margin-top:24px;gap:10px}
+.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:11px 26px;cursor:pointer;background:var(--navy);color:#fff}
+.btn.gold{background:var(--gold);color:var(--navy)}.btn.ghost{background:#e3e6f0;color:var(--navy)}
+.thanks{text-align:center;padding:30px 10px}.thanks h2{color:var(--navy)}
+table{border-collapse:collapse;width:100%;font-size:.85rem}th,td{border:1px solid #d3d8e8;padding:6px;vertical-align:top}th{background:var(--navy);color:#fff}
+.tablewrap{overflow-x:auto}
+@media print{header .btn,.noprint{display:none!important}body{background:#fff}.card{box-shadow:none}}
