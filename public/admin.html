@@ -1,0 +1,69 @@
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>گزارش نظرسنجی</title>
+<link rel="stylesheet" href="/style.css?v=2">
+<script src="/lib/xlsx.js"></script><script src="/lib/chart.js"></script></head><body>
+<header><div class="logos"><img src="/logo-center.png"><img src="/logo-ldec.png"></div><h1>گزارش نظرسنجی اولیا — دپارتمان زبان کانون نخبگان</h1></header>
+<main><div class="card" id="box"><p>رمز مدیر را وارد کنید:</p><input type="password" id="pw"><br><br><button class="btn" onclick="load()">ورود</button></div></main>
+<script src="/questions.js"></script>
+<script>
+let rows=[];const NAVY="#0d2a6b",GOLD="#f5c518";
+const RQ=ALL_Q.filter(q=>q.type=="rating");
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const vals=id=>rows.map(r=>+r[id]).filter(Boolean);
+const fa=(n,d=1)=>(+n).toLocaleString("fa-IR",{minimumFractionDigits:d,maximumFractionDigits:d});
+async function load(){
+ const r=await fetch("/api/results",{headers:{"x-admin-password":document.getElementById("pw").value}});
+ if(!r.ok){alert("رمز نادرست است یا خطایی رخ داد");return}
+ rows=(await r.json()).rows;show()}
+function teachers(){const m={};rows.forEach(r=>{const t=(r.q10||"").trim();if(!t)return;(m[t]=m[t]||[]).push(r)});
+ return Object.entries(m).map(([t,rs])=>{const v=rs.flatMap(r=>[+r.q11,+r.q12]).filter(Boolean);
+  return {t,n:rs.length,avg:mean(v),yes:rs.filter(r=>r.q13=="بله").length}}).sort((a,b)=>b.avg-a.avg)}
+function show(){
+ const texts=ALL_Q.filter(q=>q.type=="text").map(q=>`<h3>${q.n}. ${q.t}</h3><ul>${rows.filter(r=>r[q.id]).map(r=>`<li>${r[q.id]} <small>(${r.name||"ناشناس"} — استاد: ${r.q10||"-"})</small></li>`).join("")}</ul>`).join("");
+ document.getElementById("box").innerHTML=`<div class="noprint"><button class="btn gold" onclick="xl()">دریافت اکسل</button>
+ <button class="btn" onclick="print()">دریافت PDF (گزارش کامل)</button>
+ <button class="btn ghost" onclick="pub()">تصویر نمودار برای انتشار در کانال</button></div>
+ <h2>تعداد پاسخ‌ها: ${rows.length}</h2>
+ <h3>نمودار ۱: میانگین نمرات (از ۵)</h3><canvas id="c1"></canvas>
+ <h3>نمودار ۲: توزیع نمرات هر پرسش</h3><canvas id="c2"></canvas>
+ <h3>نمودار ۳: میانگین ارتباط و ترغیب‌کنندگی به تفکیک استاد</h3><canvas id="c3"></canvas>
+ <div class="tablewrap"><table><tr><th>استاد</th><th>تعداد پاسخ</th><th>میانگین</th><th>پیشنهاد برای ترم بعد (بله)</th></tr>${teachers().map(x=>`<tr><td>${x.t}</td><td>${x.n}</td><td>${fa(x.avg,2)}</td><td>${x.yes}</td></tr>`).join("")}</table></div>
+ <h3>نمودار ۴: پرسش‌های چندگزینه‌ای</h3><div style="display:flex;flex-wrap:wrap;gap:20px">${ALL_Q.filter(q=>q.type=="choice").map(q=>`<div style="flex:1;min-width:240px"><b>${q.n}. ${q.t}</b><canvas id="ch${q.n}"></canvas></div>`).join("")}</div>
+ <h3>پاسخ‌های تشریحی</h3>${texts}`;
+ Chart.defaults.font.family="Main";Chart.defaults.font.size=13;
+ const L=RQ.map(q=>SHORT[q.id]);
+ new Chart(c1,{type:"bar",data:{labels:L,datasets:[{data:RQ.map(q=>+mean(vals(q.id)).toFixed(2)),backgroundColor:NAVY}]},
+  options:{indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{min:0,max:5},y:{position:"right"}}}});
+ const cols=["#b3261e","#e8833a",GOLD,"#6c8ed6",NAVY];
+ new Chart(c2,{type:"bar",data:{labels:L,datasets:[1,2,3,4,5].map(n=>({label:RATING_LABELS[n-1]+" ("+n+")",backgroundColor:cols[n-1],
+  data:RQ.map(q=>{const v=vals(q.id);return v.length?Math.round(v.filter(x=>x==n).length/v.length*100):0})}))},
+  options:{indexAxis:"y",plugins:{legend:{rtl:true}},scales:{x:{stacked:true,max:100,title:{display:true,text:"درصد"}},y:{stacked:true,position:"right"}}}});
+ const T=teachers();
+ new Chart(c3,{type:"bar",data:{labels:T.map(x=>x.t+" ("+x.n+")"),datasets:[{data:T.map(x=>+x.avg.toFixed(2)),backgroundColor:GOLD}]},
+  options:{plugins:{legend:{display:false}},scales:{y:{min:0,max:5}}}});
+ ALL_Q.filter(q=>q.type=="choice").forEach(q=>new Chart(document.getElementById("ch"+q.n),{type:"doughnut",
+  data:{labels:q.options,datasets:[{data:q.options.map(o=>rows.filter(r=>r[q.id]==o).length),backgroundColor:[NAVY,GOLD,"#b3261e"]}]},options:{plugins:{legend:{rtl:true}}}}))}
+function xl(){
+ const data=rows.map(r=>{const o={"زمان ثبت":r.time,"نام":r.name||"ناشناس"};ALL_Q.filter(q=>q.id!="name").forEach(q=>o[q.n+". "+q.t]=r[q.id]||"");return o});
+ const ws=XLSX.utils.json_to_sheet(data);ws["!views"]=[{RTL:true}];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"نظرسنجی");XLSX.writeFile(wb,"survey-report.xlsx")}
+// تصویر قابل انتشار (بدون نام اولیا، بدون نام اساتید، بدون متن‌های تشریحی)
+async function pub(){
+ await document.fonts.load("20px Main");
+ const img=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=s});
+ const [l1,l2]=await Promise.all([img("/logo-center.png"),img("/logo-ldec.png")]);
+ const keys=["q1","q2","q3","q5","q6","q8","q11","q12","q18"],W=1080,H=1350,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+ x.fillStyle="#fff";x.fillRect(0,0,W,H);x.fillStyle=NAVY;x.fillRect(0,0,W,300);x.fillStyle=GOLD;x.fillRect(0,300,W,12);
+ [[l1,W/2-130],[l2,W/2+10]].forEach(([i,px])=>{x.save();x.beginPath();x.arc(px+60,110,60,0,7);x.clip();x.drawImage(i,px,50,120,120);x.restore()});
+ x.direction="rtl";x.textAlign="center";x.fillStyle="#fff";x.font="34px Main";
+ x.fillText("نتایج نظرسنجی اولیای زبان‌آموزان",W/2,230);x.fillStyle=GOLD;x.font="26px Main";x.fillText("ترم شهریور مهر — دپارتمان زبان کانون نخبگان",W/2,275);
+ const all=mean(keys.map(k=>mean(vals(k))));
+ x.fillStyle=NAVY;x.font="30px Main";x.fillText("میانگین رضایت کلی از ۵",W/2,380);x.font="100px Main";x.fillStyle=GOLD;x.fillText(fa(all,1),W/2,490);
+ x.fillStyle="#667";x.font="24px Main";x.fillText("بر اساس نظر "+fa(rows.length,0)+" نفر از اولیای گرامی",W/2,535);
+ keys.forEach((k,i)=>{const y=600+i*76,v=mean(vals(k));
+  x.textAlign="right";x.fillStyle=NAVY;x.font="26px Main";x.fillText(SHORT[k],W-70,y+30);
+  x.fillStyle="#e3e6f0";x.fillRect(120,y+8,560,30);x.fillStyle=GOLD;x.fillRect(120+560*(1-v/5),y+8,560*v/5,30);
+  x.textAlign="left";x.fillStyle=NAVY;x.fillText(fa(v,1),70-30+30,y+32)});
+ x.textAlign="center";x.fillStyle=NAVY;x.font="26px Main";x.fillText("از همراهی و نظرات ارزشمند شما سپاسگزاریم 🌟",W/2,1315);
+ const a=document.createElement("a");a.href=c.toDataURL("image/png");a.download="survey-channel.png";a.click()}
+</script></body></html>
